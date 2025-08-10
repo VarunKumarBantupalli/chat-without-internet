@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 //controller for creating a user
 export const createUser = async (req, res) => {
   try {
-    const { name, mobile, address, email, password } = req.body;
+    const {image ,name, mobile, address, email, password,role } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
@@ -14,12 +14,13 @@ export const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      image: req.file.path, // Cloudinary URL  
+      image,
       name,
       mobile,
       address,
       email,
       password: hashedPassword,
+      role
     });
 
     await newUser.save();
@@ -47,9 +48,10 @@ export const loginUser = async (req, res) => {
     }
 
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Login successful",
-      user: existingUser
+      role: existingUser.role || "user", 
+      user: existingUser,                     
     });
 
   } catch (error) {
