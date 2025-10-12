@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -18,6 +19,12 @@ const UserDashboard = () => {
       >
         Logout
       </button>
+    <div className="p-4">
+      <h1 className="text-xl font-semibold mb-4">User Dashboard</h1>
+      <Link to="/chat" className="underline text-blue-600">Go to Chat</Link>
+    </div>
+
+
     </div>
   );
 };

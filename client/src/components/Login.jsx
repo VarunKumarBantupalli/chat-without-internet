@@ -21,15 +21,30 @@ const Login = () => {
     try {
       const res = await axios.post("http://localhost:3000/api/users/login", formData);
 
-      // Assuming backend sends { role: "admin" | "user" }
-      localStorage.setItem("role", res.data.role);
+      /**
+       * Expected backend response example:
+       * {
+       *   token: "<JWT_STRING>",
+       *   role: "user" | "admin",
+       *   message: "Login successful"
+       * }
+       */
+      const { token, role } = res.data;
+
+      if (!token) {
+        throw new Error("No token received from server.");
+      }
+
+      // ✅ Save token and role for later use (socket auth, protected routes, etc.)
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
 
       setMessage("Login successful!");
 
       // Redirect based on role
-      if (res.data.role === "admin") {
+      if (role === "admin") {
         navigate("/admin-dashboard");
-      } else if (res.data.role === "user") {
+      } else if (role === "user") {
         navigate("/user-dashboard");
       } else {
         navigate("/login");
@@ -78,7 +93,9 @@ const Login = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {message && <p className="text-center mt-4 text-sm text-gray-600">{message}</p>}
+        {message && (
+          <p className="text-center mt-4 text-sm text-gray-600">{message}</p>
+        )}
       </form>
     </div>
   );

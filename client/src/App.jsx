@@ -12,6 +12,9 @@ import NotFound from './pages/NotFound';
 import Home from './pages/Home'
 import UserDashboard from './pages/UserDashboard';
 import AdminPortal from './pages/AdminPortal';
+// App.jsx (add the import)
+import Direct from './pages/Direct';
+
 
 
 
@@ -20,8 +23,8 @@ import AdminPortal from './pages/AdminPortal';
 const App = () => {
   return (
     <Router>
-      
-      <ScrollToTop/>
+
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -30,7 +33,7 @@ const App = () => {
         <Route path="/logout" element={<Logout />} />
 
 
-         
+
         {/* Protected Routes */}
         <Route
           path="/user-dashboard"
@@ -41,18 +44,29 @@ const App = () => {
           }
         />
 
-        <Route
-          path="/admin-dashboard"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <AdminPortal />              
-            </ProtectedRoute>
-          }   
-        />
-    
-        {/* Catch-all route for 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+        
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute allowedRole="user"> 
+                <Direct />
+              </ProtectedRoute>
+            }
+          />
+          
+
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminPortal />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch-all route for 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
     </Router>
   );
 };
