@@ -11,3 +11,14 @@ export async function fetchMessages(threadId, before, limit = 30) {
   const { data } = await http.get('/chat/messages', { params });
   return data.messages;
 }
+
+export async function listThreads() {
+  const { data } = await http.get('/chat/threads');
+  return data.threads;
+}
+
+export async function getBroadcastThreadId() {
+  const threads = await listThreads();
+  const t = threads.find(x => x.type === 'broadcast');
+  return t?._id || null;
+}

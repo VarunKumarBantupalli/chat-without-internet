@@ -1,23 +1,7 @@
-// // ESM
-// import { registerPresence } from './presence.js';
-
-// export function registerSockets(io) {
-//   // Base connection handler that sets rooms and emits a ready event
-//   io.on('connection', (socket) => {
-//     const userId = socket.user.id;
-//     socket.join(`u:${userId}`);
-//     socket.join('broadcast');
-//     socket.emit('socket:ready', { userId });
-//   });
-
-//   // Presence module
-//   registerPresence(io);
-// }
-
 import { registerPresence } from './presence.js';
 import { registerChat } from './chat.js';
 
-export function registerSockets(io) {
+export function registerSockets(io, opts = {}) {
   io.on('connection', (socket) => {
     const userId = socket.user.id;
     socket.join(`u:${userId}`);
@@ -26,6 +10,5 @@ export function registerSockets(io) {
   });
 
   registerPresence(io);
-  registerChat(io);
+  registerChat(io, opts);   
 }
-

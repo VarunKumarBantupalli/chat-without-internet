@@ -14,7 +14,7 @@ import UserDashboard from './pages/UserDashboard';
 import AdminPortal from './pages/AdminPortal';
 // App.jsx (add the import)
 import Direct from './pages/Direct';
-
+import Broadcast from './pages/Broadcast';
 
 
 
@@ -44,29 +44,39 @@ const App = () => {
           }
         />
 
-        
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute allowedRole="user"> 
-                <Direct />
-              </ProtectedRoute>
-            }
-          />
-          
 
-          <Route
-            path="/admin-dashboard"
-            element={
-              <ProtectedRoute allowedRole="admin">
-                <AdminPortal />
-              </ProtectedRoute>
-            }
-          />
 
-          {/* Catch-all route for 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Route
+          path="/broadcast"
+          element={
+            <ProtectedRoute allowedRole="user">
+              <Broadcast />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute allowedRole="user">
+              <Direct />
+            </ProtectedRoute>
+          }
+        />
+
+
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminPortal />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </Router>
   );
 };
