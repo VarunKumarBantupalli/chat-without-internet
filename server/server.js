@@ -8,10 +8,13 @@ import { Server } from 'socket.io';
 import connectDb from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import systemRoutes from './routes/systemRoutes.js';   // ← public read-only state
+import adminRoutes from './routes/adminRoutes.js';     // ← admin toggle
 
 import { initBroadcastThread } from './utils/initBroadcastThread.js';
 import { attachSocketAuth } from './middleware/authSocket.js';
 import { registerSockets } from './sockets/index.js';
+import { loadSystemState, getSystemState } from './utils/systemState.js'; // ← kill switch cache
 
 dotenv.config();
 
@@ -29,6 +32,8 @@ app.use(
 // REST Routes
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/system', systemRoutes); // GET /state (auth required)
+app.use('/api/admin', adminRoutes);   // GET/PUT /system (admin only)
 
 async function start() {
   try {
@@ -40,22 +45,33 @@ async function start() {
     const broadcastThreadId = await initBroadcastThread();
     console.log('[seed] broadcast thread is ready:', String(broadcastThreadId));
 
-    // 3) HTTP + Socket.IO
+    // 3) Load system state (kill switch) into cache
+    await loadSystemState();
+    console.log('[system] state:', getSystemState());
+
+    // 4) HTTP + Socket.IO
     const server = createServer(app);
     const io = new Server(server, {
       cors: { origin: '*', credentials: true },
       transports: ['websocket', 'polling'],
     });
 
-    // 4) Socket auth + handlers (pass broadcastThreadId down)
+    // 5) Socket auth + initial state emit + handlers
     attachSocketAuth(io);
+
+    // On every connection, immediately send current system state
+    io.on('connection', (socket) => {
+      socket.emit('system:state', getSystemState());
+    });
+
+    // Register app sockets (presence, chat, broadcast, calls)
     registerSockets(io, { broadcastThreadId });
 
-    // 5) Expose to app (optional, handy in routes/controllers)
+    // 6) Expose to app (optional, handy in routes/controllers)
     app.set('io', io);
     app.set('broadcastThreadId', broadcastThreadId);
 
-    // 6) Start
+    // 7) Start
     const port = process.env.PORT || 5000;
     server.listen(port, () => {
       console.log(`Server is running at http://localhost:${port}`);

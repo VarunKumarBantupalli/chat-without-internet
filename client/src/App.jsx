@@ -16,6 +16,7 @@ import AdminPortal from './pages/AdminPortal';
 import Direct from './pages/Direct';
 import Broadcast from './pages/Broadcast';
 
+import SystemBanner from './components/SystemBanner';
 
 
 
@@ -25,14 +26,13 @@ const App = () => {
     <Router>
 
       <ScrollToTop />
+      <SystemBanner />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<Logout />} />
-
-
 
         {/* Protected Routes */}
         <Route

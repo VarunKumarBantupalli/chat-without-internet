@@ -1,5 +1,6 @@
 import { registerPresence } from './presence.js';
 import { registerChat } from './chat.js';
+import { registerCall } from './call.js';
 
 export function registerSockets(io, opts = {}) {
   io.on('connection', (socket) => {
@@ -10,5 +11,6 @@ export function registerSockets(io, opts = {}) {
   });
 
   registerPresence(io);
-  registerChat(io, opts);   
+  registerChat(io, opts); 
+  registerCall(io);  
 }

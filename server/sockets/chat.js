@@ -3,6 +3,17 @@ import Joi from 'joi';
 import Thread from '../models/Thread.js';
 import Message from '../models/Message.js';
 import mongoose from 'mongoose';
+import { getSystemState } from '../utils/systemState.js';
+
+function assertRunning(cb) {
+  const s = getSystemState();
+  if (!s.running) {
+    cb && cb({ ok: false, error: 'SYSTEM_PAUSED', reason: s.reason });
+    return false;
+  }
+  return true;
+}
+
 
 const directSchema = Joi.object({
   to: Joi.string().required(),                 // userId (for direct)
@@ -29,6 +40,7 @@ export function registerChat(io, opts = {}) {
 
     // -------- 1) DIRECT MESSAGES --------
     socket.on('chat:send', async (payload, cb) => {
+      if (!assertRunning(cb)) return;
       try {
         const { value, error } = directSchema.validate(payload);
         if (error) throw new Error(error.details[0].message);
@@ -84,6 +96,7 @@ export function registerChat(io, opts = {}) {
 
     // -------- 2) BROADCAST MESSAGES --------
     socket.on('chat:broadcast', async (payload, cb) => {
+      if (!assertRunning(cb)) return;
       try {
         if (!broadcastThreadId) throw new Error('Broadcast channel not ready');
         const { value, error } = broadcastSchema.validate(payload);

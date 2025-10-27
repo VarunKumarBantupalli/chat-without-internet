@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { connectSocket, getSocket } from '../lib/socket';
 import { fetchMessages, getBroadcastThreadId } from '../api/chat';
 import MessageInput from './MessageInput';
+import useSystemState from '../hooks/useSystemState';
 
 export default function BroadcastPanel({ meId }) {
   const [threadId, setThreadId] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const listRef = useRef(null);
+  const { running } = useSystemState();
 
   // ensure socket
   useEffect(() => { connectSocket(); }, []);
@@ -40,6 +42,14 @@ export default function BroadcastPanel({ meId }) {
   const onSend = (text) => {
     const s = getSocket();
     if (!s || !threadId) return;
+
+    // If system is paused, do nothing (UI is also disabled)
+    if (!running) {
+      // Optional: show a lightweight notice
+      console.warn('System paused by admin — broadcast disabled.');
+      return;
+    }
+
     const tempId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     // optimistic bubble
@@ -56,6 +66,7 @@ export default function BroadcastPanel({ meId }) {
 
     s.emit('chat:broadcast', { body: text, tempId }, (ack) => {
       if (!ack?.ok) {
+        // mark failed if server rejected (e.g., SYSTEM_PAUSED race)
         setMsgs(prev => prev.map(m => m._id === tempId ? { ...m, failed: true } : m));
         return;
       }
@@ -66,7 +77,18 @@ export default function BroadcastPanel({ meId }) {
   return (
     <div className="h-full flex flex-col">
       <div className="font-semibold mb-2">Broadcast channel</div>
-      <div ref={listRef} className="flex-1 overflow-y-auto border rounded p-3 space-y-2" style={{ minHeight: 320 }}>
+
+      {!running && (
+        <div className="mb-2 text-xs text-yellow-900 bg-yellow-200 rounded px-2 py-1">
+          System paused by admin — sending is disabled.
+        </div>
+      )}
+
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto border rounded p-3 space-y-2"
+        style={{ minHeight: 320 }}
+      >
         {msgs.map((m) => {
           const mine = m.from === meId;
           return (
@@ -81,7 +103,8 @@ export default function BroadcastPanel({ meId }) {
           );
         })}
       </div>
-      <MessageInput onSend={onSend} disabled={!threadId} />
+
+      <MessageInput onSend={onSend} disabled={!threadId || !running} />
     </div>
   );
 }

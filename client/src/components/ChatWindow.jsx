@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getSocket, connectSocket } from '../lib/socket';
 import { ensureThread, fetchMessages } from '../api/chat';
-import MessageInput from './MessageInput'; 
+import MessageInput from './MessageInput';
+import useSystemState from '../hooks/useSystemState';
 
 export default function ChatWindow({ meId, toUser }) {
   const [thread, setThread] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const listRef = useRef(null);
-
+  
+  const { running } = useSystemState();
   // ensure socket exists
   useEffect(() => { connectSocket(); }, []);
 
@@ -103,7 +105,7 @@ export default function ChatWindow({ meId, toUser }) {
           );
         })}
       </div>
-      <MessageInput onSend={onSend} disabled={!thread} />
+      <MessageInput onSend={onSend} disabled={!thread  || !running} />
     </div>
   );
 }
