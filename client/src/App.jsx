@@ -17,6 +17,11 @@ import Direct from './pages/Direct';
 import Broadcast from './pages/Broadcast';
 
 import SystemBanner from './components/SystemBanner';
+import AudioCall from './components/Audiocall';
+import VideoCall from './components/Videocall';
+
+// inside <Routes>
+
 
 
 
@@ -36,7 +41,7 @@ const App = () => {
 
         {/* Protected Routes */}
         <Route
-          path="/user-dashboard"
+          path="/dashboard"
           element={
             <ProtectedRoute allowedRole="user">
               <UserDashboard />
@@ -54,9 +59,15 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        
+
+        <Route path="/call/audio/:id" element={<AudioCall />} />
+<Route path="/call/video/:id" element={<VideoCall />} />
+           
+    
 
         <Route
-          path="/chat"
+          path="/chat/:id"
           element={
             <ProtectedRoute allowedRole="user">
               <Direct />
