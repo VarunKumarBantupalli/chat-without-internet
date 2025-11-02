@@ -1,34 +1,38 @@
-// client/src/hooks/useCall.js
-import { useEffect, useRef, useState } from "react";
+// src/context/CallContext.jsx
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { connectSocket, getSocket } from "../lib/socket";
 
-// MVP: no TURN. Works best on same AP. (We'll add TURN later.)
-export default function useCall(meId) {
-  // idle | calling | incoming | connecting | in_call
+const CallContext = createContext(null);
+
+export function CallProvider({ children }) {
+  // "idle" | "calling" | "incoming" | "connecting" | "active"
   const [state, setState] = useState("idle");
-  const [remoteUser, setRemoteUser] = useState(null); // { userId }
+  const [remoteUser, setRemoteUser] = useState(null); // { userId, name? }
   const [incomingOffer, setIncomingOffer] = useState(null);
   const [incomingHasVideo, setIncomingHasVideo] = useState(false);
 
-  const localStreamRef = useRef(null);
-  const remoteStreamRef = useRef(new MediaStream());
-  const pcRef = useRef(null);
+  const [localStream, setLocalStream] = useState(null);
 
-  // 🧠 NEW: queue for early ICE candidates
+  // Keep one remote stream instance forever to avoid re-render loops.
+  const remoteStreamRef = useRef(new MediaStream());
+  const remoteStream = remoteStreamRef.current;
+
+  const pcRef = useRef(null);
+  const cleaningRef = useRef(false); // re-entrancy guard for cleanup
+
+  // ICE ordering safety
   const pendingRemoteCandidatesRef = useRef([]);
   const remoteDescSetRef = useRef(false);
 
   const ensureSocket = () => getSocket() || connectSocket();
+  const sdpHasVideo = (desc) => typeof desc?.sdp === "string" && /m=video/.test(desc.sdp);
 
-  // --- utils ---
-  const sdpHasVideo = (desc) =>
-    typeof desc?.sdp === "string" && /m=video/.test(desc.sdp);
-
-  // --- Peer Connection setup ---
   const ensurePc = () => {
     if (pcRef.current) return pcRef.current;
 
-    const pc = new RTCPeerConnection({ iceServers: [] });
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
 
     pc.onicecandidate = (e) => {
       if (!e.candidate) return;
@@ -38,17 +42,24 @@ export default function useCall(meId) {
     };
 
     pc.ontrack = (e) => {
-      e.streams[0].getTracks().forEach((t) => {
-        remoteStreamRef.current.addTrack(t);
-      });
+      // Do NOT set React state here (prevents render loops).
+      if (e.streams && e.streams[0]) {
+        // Add every track from the provided stream if not present
+        e.streams[0].getTracks().forEach((track) => {
+          const exists = remoteStream.getTracks().some((t) => t.id === track.id);
+          if (!exists) remoteStream.addTrack(track);
+        });
+      } else if (e.track) {
+        const exists = remoteStream.getTracks().some((t) => t.id === e.track.id);
+        if (!exists) remoteStream.addTrack(e.track);
+      }
     };
 
     pc.onconnectionstatechange = () => {
-      console.log("[pc] connectionState:", pc.connectionState);
-      if (pc.connectionState === "connected") setState("in_call");
-      if (
-        ["failed", "disconnected", "closed"].includes(pc.connectionState)
-      ) {
+      const cs = pc.connectionState;
+      console.log("[pc] connectionState:", cs);
+      if (cs === "connected") setState("active");
+      if (["failed", "disconnected", "closed"].includes(cs)) {
         cleanup();
       }
     };
@@ -57,49 +68,39 @@ export default function useCall(meId) {
     return pc;
   };
 
-  // --- Media handling ---
   const startLocalMedia = async (withVideo) => {
-    // stop previous tracks if any
-    if (localStreamRef.current) {
-      try {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-      } catch {}
+    // stop old tracks if any
+    if (localStream) {
+      try { localStream.getTracks().forEach((t) => t.stop()); } catch {}
     }
-
     const constraints = withVideo
       ? { audio: true, video: { width: 640, height: 360, frameRate: 24 } }
       : { audio: true, video: false };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    localStreamRef.current = stream;
+    setLocalStream(stream);
 
     const pc = ensurePc();
-    // clear old senders before adding new tracks
+    // Clear old senders before adding new tracks
     pc.getSenders().forEach((s) => {
-      try {
-        pc.removeTrack(s);
-      } catch {}
+      try { pc.removeTrack(s); } catch {}
     });
-
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     return stream;
   };
 
-  // --- ICE candidate queue logic ---
   const addIceCandidateSafe = async (candidate) => {
     const pc = ensurePc();
     if (!candidate) return;
 
     if (!remoteDescSetRef.current || !pc.remoteDescription) {
-      // queue ICE until remote SDP is ready
       pendingRemoteCandidatesRef.current.push(candidate);
       return;
     }
-
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (err) {
-      console.warn("[sig] addIceCandidate deferred; queued again", err);
+      console.warn("[sig] addIceCandidate failed, re-queue", err);
       pendingRemoteCandidatesRef.current.push(candidate);
     }
   };
@@ -109,26 +110,23 @@ export default function useCall(meId) {
     if (!pc) return;
     const queued = pendingRemoteCandidatesRef.current.splice(0);
     for (const c of queued) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(c));
-      } catch (e) {
-        console.warn("flush ICE failed", e);
-      }
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); }
+      catch (e) { console.warn("flush ICE failed", e); }
     }
   };
 
   const cleanup = () => {
-    try {
-      pcRef.current?.close();
-    } catch {}
+    if (cleaningRef.current) return; // prevent loops
+    cleaningRef.current = true;
+
+    try { pcRef.current?.close(); } catch {}
     pcRef.current = null;
 
-    try {
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    } catch {}
-    localStreamRef.current = null;
+    try { localStream?.getTracks().forEach((t) => t.stop()); } catch {}
+    setLocalStream(null);
 
-    remoteStreamRef.current = new MediaStream();
+    // Remove tracks from remote stream without replacing the object
+    try { remoteStream.getTracks().forEach((t) => remoteStream.removeTrack(t)); } catch {}
 
     remoteDescSetRef.current = false;
     pendingRemoteCandidatesRef.current = [];
@@ -137,15 +135,17 @@ export default function useCall(meId) {
     setIncomingOffer(null);
     setIncomingHasVideo(false);
     setState("idle");
+
+    cleaningRef.current = false;
   };
 
-  // --- signaling listeners ---
+  // --- Signaling listeners (once) ---
   useEffect(() => {
     const s = ensureSocket();
 
-    const onRing = ({ from, offer }) => {
+    const onRing = ({ from, offer, fromName }) => {
       console.log("[sig] incoming offer from", from);
-      setRemoteUser({ userId: from });
+      setRemoteUser({ userId: from, name: fromName || undefined });
       setIncomingOffer(offer);
       setIncomingHasVideo(sdpHasVideo(offer));
       setState("incoming");
@@ -154,7 +154,8 @@ export default function useCall(meId) {
     const onAnswer = async ({ from, answer }) => {
       console.log("[sig] got answer from", from);
       const pc = ensurePc();
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      const rd = answer?.type ? answer : new RTCSessionDescription(answer);
+      await pc.setRemoteDescription(rd);
       remoteDescSetRef.current = true;
       await flushQueuedIce();
       setState("connecting");
@@ -183,15 +184,13 @@ export default function useCall(meId) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- actions ---
-  const callAudio = async (toUser) => callUserInternal(toUser, false);
-  const callVideo = async (toUser) => callUserInternal(toUser, true);
-
+  // --- Actions ---
   const callUserInternal = async (toUser, withVideo) => {
     const to = toUser?.userId || toUser;
     if (!to) return;
 
-    setRemoteUser({ userId: to });
+    // Set a friendly name if known
+    setRemoteUser({ userId: to, name: toUser?.name || undefined });
     setState("calling");
 
     await startLocalMedia(withVideo);
@@ -203,7 +202,15 @@ export default function useCall(meId) {
     });
     await pc.setLocalDescription(offer);
 
-    ensureSocket().emit("call:ring", { to, offer }, (ack) => {
+    // Try to pass my display name (optional; server just forwards if present)
+    let myName;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const payload = JSON.parse(atob(token.split(".")[1] || "e30="));
+      myName = payload?.name;
+    } catch {}
+
+    ensureSocket().emit("call:ring", { to, offer, fromName: myName }, (ack) => {
       if (!ack?.ok) {
         console.warn("[sig] call:ring failed", ack?.error);
         cleanup();
@@ -211,14 +218,18 @@ export default function useCall(meId) {
     });
   };
 
+  const callAudio = async (toUser) => callUserInternal(toUser, false);
+  const callVideo = async (toUser) => callUserInternal(toUser, true);
+
   const accept = async () => {
     if (!incomingOffer || !remoteUser) return;
-
     const needVideo = incomingHasVideo;
+
     await startLocalMedia(needVideo);
     const pc = ensurePc();
 
-    await pc.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+    const rd = incomingOffer?.type ? incomingOffer : new RTCSessionDescription(incomingOffer);
+    await pc.setRemoteDescription(rd);
     remoteDescSetRef.current = true;
     await flushQueuedIce();
 
@@ -232,51 +243,58 @@ export default function useCall(meId) {
 
   const decline = () => {
     if (remoteUser) {
-      ensureSocket().emit("call:end", {
-        to: remoteUser.userId,
-        reason: "decline",
-      });
+      ensureSocket().emit("call:end", { to: remoteUser.userId, reason: "decline" });
     }
     cleanup();
   };
 
   const hangup = () => {
     if (remoteUser) {
-      ensureSocket().emit("call:end", {
-        to: remoteUser.userId,
-        reason: "hangup",
-      });
+      ensureSocket().emit("call:end", { to: remoteUser.userId, reason: "hangup" });
     }
     cleanup();
   };
 
-  // Controls during call (no renegotiation)
   const toggleMute = (mute) => {
-    localStreamRef.current?.getAudioTracks().forEach(
-      (t) => (t.enabled = !mute)
-    );
+    localStream?.getAudioTracks()?.forEach((t) => (t.enabled = !mute));
   };
 
   const toggleCamera = (on) => {
-    const v = localStreamRef.current?.getVideoTracks?.()[0];
+    const v = localStream?.getVideoTracks?.()[0];
     if (v) v.enabled = on;
   };
 
-  return {
-    state,
-    remoteUser,
-    incomingOffer,
-    incomingHasVideo,
-    localStream: localStreamRef.current,
-    remoteStream: remoteStreamRef.current,
-    callAudio,
-    callVideo,
-    accept,
-    decline,
-    hangup,
-    toggleMute,
-    toggleCamera,
-  };
+  const value = useMemo(
+    () => ({
+      state,
+      remoteUser,
+      incomingOffer,
+      incomingHasVideo,
+      localStream,
+      remoteStream,
+      callAudio,
+      callVideo,
+      accept,
+      decline,
+      hangup,
+      toggleMute,
+      toggleCamera,
+    }),
+    [
+      state,
+      remoteUser,
+      incomingOffer,
+      incomingHasVideo,
+      localStream,
+      // remoteStream is intentionally omitted: it’s stable (same instance)
+    ]
+  );
+
+  return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
 }
 
-export { useCall } from "../context/CallContext";
+export function useCall() {
+  const ctx = useContext(CallContext);
+  if (!ctx) throw new Error("useCall must be used within <CallProvider>");
+  return ctx;
+}

@@ -1,5 +1,6 @@
 // ESM
 // Keeps track of who is online and broadcasts join/leave/status updates.
+//presence.js
 
 const usersOnline = new Map(); 
 // Map<userId, { sockets:Set<string>, status:'online'|'away'|'busy', lastSeen:number, name?:string }>

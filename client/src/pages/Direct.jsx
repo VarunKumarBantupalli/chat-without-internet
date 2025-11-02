@@ -1,12 +1,13 @@
+// src/pages/Direct.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Phone, Video, Circle, Search } from "lucide-react";
+import { Phone, Video, Circle } from "lucide-react";
 import usePresence from "../hooks/usePresence";
 import useSystemState from "../hooks/useSystemState";
 import { getSocket, connectSocket } from "../lib/socket";
 import { ensureThread, fetchMessages } from "../api/chat";
 import MessageInput from "../components/MessageInput";
-import useCall from "../hooks/useCall";
+import { useCall } from "../hooks/useCall";
 
 const AVATAR = (name = "User") =>
   `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
@@ -14,42 +15,48 @@ const AVATAR = (name = "User") =>
   )}&backgroundType=gradientLinear&fontFamily=Helvetica`;
 
 export default function Direct() {
-  const { id } = useParams();            // /chat/:userId
+  const { id } = useParams(); // /chat/:userId
   const navigate = useNavigate();
-  const { online } = usePresence();      // [{ userId, name, status }, ...]
+  const { online } = usePresence();
   const { running } = useSystemState();
 
-  // useCall for incoming popup + quick actions
+  // shared call instance
   const {
     state: callState,
     remoteUser,
     incomingHasVideo,
-    decline
-  } = useCall(null); // we only need incoming state here
+    callAudio,
+    callVideo,
+    accept,
+    decline,
+  } = useCall();
 
-  // decode meId from token
+  // decode meId from JWT
   const token = localStorage.getItem("token") || "";
   let meId = null;
-  try { meId = JSON.parse(atob(token.split(".")[1] || "e30="))?.id || null; } catch {}
+  try {
+    meId = JSON.parse(atob(token.split(".")[1] || "e30="))?.id || null;
+  } catch {}
 
   // chat state
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [thread, setThread] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const listRef = useRef(null);
 
-  useEffect(() => { connectSocket(); }, []);
+  useEffect(() => {
+    connectSocket();
+  }, []);
 
-  // hydrate selected from presence / URL
+  // select user from URL/presence
   useEffect(() => {
     if (!id) return;
-    const hit = online.find(u => u.userId === id);
-    if (hit) setSelected(hit);
+    const found = online.find((u) => u.userId === id);
+    if (found) setSelected(found);
     else if (!selected) setSelected({ userId: id, name: id, status: "online" });
-  }, [id, online]); // keep synced
+  }, [id, online]); // eslint-disable-line
 
-  // find/create thread + history
+  // ensure/find thread + load last messages
   useEffect(() => {
     if (!selected) return;
     (async () => {
@@ -61,18 +68,18 @@ export default function Direct() {
     })();
   }, [selected]);
 
-  // live receive / ack
+  // live updates
   useEffect(() => {
     const s = getSocket();
     if (!s) return;
     const onRecv = (m) => {
       if (!thread || m.thread_id !== thread._id) return;
-      setMsgs(prev => [...prev, m]);
+      setMsgs((prev) => [...prev, m]);
       setTimeout(() => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }), 0);
     };
     const onAck = ({ msg }) => {
       if (!thread || msg.thread_id !== thread._id) return;
-      setMsgs(prev => prev);
+      setMsgs((prev) => prev);
     };
     s.on("chat:recv", onRecv);
     s.on("chat:ack", onAck);
@@ -82,9 +89,11 @@ export default function Direct() {
     };
   }, [thread]);
 
+  // send
   const onSend = async (text) => {
     const s = getSocket() || connectSocket();
     if (!thread || !selected) return;
+
     const tempId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const optimistic = {
       _id: tempId,
@@ -95,36 +104,46 @@ export default function Direct() {
       created_at: new Date().toISOString(),
       optimistic: true,
     };
-    setMsgs(prev => [...prev, optimistic]);
+    setMsgs((prev) => [...prev, optimistic]);
     setTimeout(() => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }), 0);
 
     s.emit("chat:send", { to: selected.userId, body: text, tempId }, (ack) => {
       if (!ack?.ok) {
-        setMsgs(prev => prev.map(m => (m._id === tempId ? { ...m, failed: true } : m)));
+        setMsgs((prev) => prev.map((m) => (m._id === tempId ? { ...m, failed: true } : m)));
         return;
       }
-      setMsgs(prev => prev.map(m => (m._id === tempId ? ack.msg : m)));
+      setMsgs((prev) => prev.map((m) => (m._id === tempId ? ack.msg : m)));
     });
   };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return online;
-    return online.filter(u => (u?.name || "").toLowerCase().includes(q));
-  }, [query, online]);
-
   const title = useMemo(() => selected?.name || selected?.userId || "—", [selected]);
 
-  const goAudio = () => selected && navigate(`/call/audio/${selected.userId}`);
-  const goVideo = () => selected && navigate(`/call/video/${selected.userId}`);
+  // START the call here using the shared engine, then navigate to call UI
+  const goAudio = () => {
+    if (!selected || !running) return;
+    callAudio(selected);
+    navigate(`/call/audio/${selected.userId}`);
+  };
+
+  const goVideo = () => {
+    if (!selected || !running) return;
+    callVideo(selected);
+    navigate(`/call/video/${selected.userId}`);
+  };
+
+  // Incoming popup: accept first, then navigate to correct page
+  const onAcceptIncoming = () => {
+    if (!remoteUser) return;
+    accept();
+    navigate(`/call/${incomingHasVideo ? "video" : "audio"}/${remoteUser.userId}`);
+  };
 
   return (
     <div className="min-h-screen bg-ink-900 text-paper-50">
       <div className="container mx-auto p-4 grid gap-4 md:grid-cols-3">
-
-        {/* RIGHT: chat */}
+        {/* Chat area */}
         <section className="md:col-span-2 rounded-2xl border border-ink-700 bg-ink-800/60 flex flex-col">
-          {/* header */}
+          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-ink-700">
             <div className="flex items-center gap-3 min-w-0">
               <img
@@ -134,7 +153,9 @@ export default function Direct() {
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-medium truncate max-w-[58vw] sm:max-w-[40vw]">{title}</h2>
+                  <h2 className="font-medium truncate max-w-[58vw] sm:max-w-[40vw]">
+                    {title}
+                  </h2>
                   {selected && (
                     <span className="inline-flex items-center gap-1 text-xs text-green-400">
                       <Circle className="h-2 w-2 fill-green-400 text-green-400" />
@@ -166,7 +187,7 @@ export default function Direct() {
             </div>
           </div>
 
-          {/* messages */}
+          {/* Messages */}
           <div
             ref={listRef}
             className="flex-1 overflow-y-auto p-3 space-y-2 bg-ink-900/35"
@@ -178,7 +199,9 @@ export default function Direct() {
                 <div key={m._id} className={`max-w-[72%] ${mine ? "ml-auto text-right" : ""}`}>
                   <div
                     className={`inline-block rounded-2xl px-3 py-2 ${
-                      mine ? "bg-brand text-paper-50" : "bg-ink-700/70 text-paper-50 border border-ink-600"
+                      mine
+                        ? "bg-brand text-paper-50"
+                        : "bg-ink-700/70 text-paper-50 border border-ink-600"
                     }`}
                   >
                     {m.body}
@@ -192,7 +215,7 @@ export default function Direct() {
             })}
           </div>
 
-          {/* input */}
+          {/* Input */}
           <div className="border-t border-ink-700 p-3">
             <MessageInput onSend={onSend} disabled={!thread || !running} />
           </div>
@@ -209,25 +232,19 @@ export default function Direct() {
               className="h-12 w-12 rounded-full border border-ink-600 bg-ink-700 object-cover"
             />
             <div className="min-w-0">
-              <div className="font-medium truncate">{remoteUser?.name || remoteUser?.userId}</div>
+              <div className="font-medium truncate">
+                {remoteUser?.name || remoteUser?.userId}
+              </div>
               <div className="text-xs text-paper-400">
                 Incoming {incomingHasVideo ? "video" : "audio"} call
               </div>
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <button
-              className="flex-1 rounded-xl bg-brand text-paper-50 py-2"
-              onClick={() =>
-                navigate(`/call/${incomingHasVideo ? "video" : "audio"}/${remoteUser.userId}`)
-              }
-            >
+            <button className="flex-1 rounded-xl bg-brand text-paper-50 py-2" onClick={onAcceptIncoming}>
               Accept
             </button>
-            <button
-              className="flex-1 rounded-xl bg-ink-700 text-paper-50 border border-ink-600 py-2"
-              onClick={decline}
-            >
+            <button className="flex-1 rounded-xl bg-ink-700 text-paper-50 border border-ink-600 py-2" onClick={decline}>
               Decline
             </button>
           </div>

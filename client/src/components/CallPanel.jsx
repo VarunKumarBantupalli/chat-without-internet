@@ -44,7 +44,7 @@ export default function CallPanel({ meId, targetUser }) {
   }, [remoteStream]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 bg-yellow-500">
       <div className="text-sm text-paper-400">
         Call state: <b className="text-paper-200">{state}</b>
       </div>

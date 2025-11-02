@@ -4,12 +4,13 @@ import { getSystemState } from '../utils/systemState.js';
 
 const ringSchema = Joi.object({
   to: Joi.string().required(),
-  offer: Joi.object().required(), // SDP offer
+  offer: Joi.object().required(),      // SDP offer
+  fromName: Joi.string().optional(),   // NEW: forward caller display name if provided
 });
 
 const answerSchema = Joi.object({
   to: Joi.string().required(),
-  answer: Joi.object().required(), // SDP answer
+  answer: Joi.object().required(),     // SDP answer
 });
 
 const iceSchema = Joi.object({
@@ -43,10 +44,12 @@ export function registerCall(io) {
 
         const { value, error } = ringSchema.validate(payload);
         if (error) throw new Error(error.details[0].message);
-        const { to, offer } = value;
+        const { to, offer, fromName } = value;
 
-        // forward to callee
-        io.to(`u:${to}`).emit('call:ring', { from: me, offer });
+        console.log('[call] ring from', me, 'to', to, fromName ? `(name: ${fromName})` : '');
+
+        // forward to callee's personal room
+        io.to(`u:${to}`).emit('call:ring', { from: me, offer, fromName });
         cb && cb({ ok: true });
       } catch (e) {
         cb && cb({ ok: false, error: e.message });
