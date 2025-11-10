@@ -23,7 +23,11 @@ function signToken(user) {
 // CREATE USER
 export const createUser = async (req, res) => {
   try {
-    const { image, name, mobile, address, email, password, role } = req.body;
+    const { image, name, mobile, address, tag, email, password, role } = req.body;
+
+    if (!image || !name || !mobile || !address || !tag || !email || !password) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
@@ -35,6 +39,7 @@ export const createUser = async (req, res) => {
       name,
       mobile,
       address,
+      tag,
       email,
       password: hashedPassword,
       role: role || 'user',
@@ -51,6 +56,8 @@ export const createUser = async (req, res) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        tag: newUser.tag,
+        image: newUser.image,
         role: newUser.role,
       },
       token, // <-- returned if you want auto-login after register
@@ -86,6 +93,8 @@ export const loginUser = async (req, res) => {
         _id: existingUser._id,
         name: existingUser.name,
         email: existingUser.email,
+        image: existingUser.image,
+        tag: existingUser.tag,
         role: existingUser.role,
       },
       token, // <-- IMPORTANT for your frontend + sockets

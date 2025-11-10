@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { connectSocket, getSocket } from '../lib/socket';
 
+const normalizeUser = (user = {}) => ({
+  userId: user.userId,
+  name: user.name || 'User',
+  status: user.status || 'online',
+  lastSeen: user.lastSeen || null,
+  image: user.image || null,
+  tag: user.tag || '',
+});
+
 export default function usePresence() {
   const [online, setOnline] = useState([]); // [{userId, name, status, lastSeen}]
 
@@ -15,14 +24,14 @@ export default function usePresence() {
 
     const onList = (users) => {
       // full list of online users (including self)
-      setOnline(users);
+      setOnline((users || []).map(normalizeUser));
     };
 
     const onUpdate = (u) => {
       setOnline((prev) => {
         const map = new Map(prev.map(x => [x.userId, x]));
         if (u.online) {
-          map.set(u.userId, { userId: u.userId, name: u.name, status: u.status, lastSeen: u.lastSeen });
+          map.set(u.userId, normalizeUser(u));
         } else {
           map.delete(u.userId);
         }

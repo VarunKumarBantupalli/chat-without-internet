@@ -147,7 +147,7 @@ export default function Direct() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-ink-700">
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src={AVATAR(selected?.name)}
+                src={selected?.image}
                 alt={selected?.name || "User"}
                 className="h-9 w-9 rounded-full border border-ink-600 bg-ink-700 object-cover"
               />
@@ -163,7 +163,7 @@ export default function Direct() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-paper-400 truncate">Say hello 👋</p>
+                <p className="text-xs text-paper-400 truncate">{selected?.tag}</p>
               </div>
             </div>
 
@@ -227,7 +227,7 @@ export default function Direct() {
         <div className="fixed bottom-6 right-6 z-40 w-[320px] rounded-2xl border border-ink-700 bg-ink-800/90 backdrop-blur shadow-xl p-4">
           <div className="flex items-center gap-3">
             <img
-              src={AVATAR(remoteUser?.name || remoteUser?.userId)}
+              src={remoteUser?.image}
               alt="caller"
               className="h-12 w-12 rounded-full border border-ink-600 bg-ink-700 object-cover"
             />

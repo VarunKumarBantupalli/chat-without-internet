@@ -10,6 +10,7 @@ import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';   // ← public read-only state
 import adminRoutes from './routes/adminRoutes.js';     // ← admin toggle
+import userUpdateRoutes from "./routes/userUpdateRoutes.js";
 
 import { initBroadcastThread } from './utils/initBroadcastThread.js';
 import { attachSocketAuth } from './middleware/authSocket.js';
@@ -34,6 +35,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/system', systemRoutes); // GET /state (auth required)
 app.use('/api/admin', adminRoutes);   // GET/PUT /system (admin only)
+app.use("/api/users", userUpdateRoutes);   
 
 async function start() {
   try {

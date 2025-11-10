@@ -20,6 +20,7 @@ import VideoCall from './components/VideoCall';
 
 import { CallProvider } from './context/CallContext';
 import IncomingCallToast from './components/IncomingCallToast';
+import Profile from './pages/Profile';
 
 function GlobalIncomingToast() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/logout" element={<Logout />} />
+          <Route path="/profile" element={<Profile />} />
 
           {/* Protected Routes */}
           <Route

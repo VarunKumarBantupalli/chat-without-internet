@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Radio, LogOut, Search, Megaphone } from "lucide-react";
+import { Radio, LogOut, Search, Megaphone, User } from "lucide-react";
 import OnlineList from "../components/OnlineList";
 
 const UserDashboard = () => {
@@ -17,17 +17,15 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-ink-900 text-paper-50 relative">
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-ink-700 bg-ink-900/80 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-3 grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr_auto] md:items-center">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Radio className="h-5 w-5 text-brand" />
-            <span className="font-semibold tracking-tight">
-              OfflineOrbit
-            </span>
+            <span className="font-semibold tracking-tight">OfflineOrbit</span>
           </div>
 
           {/* Global search */}
-          <div className="relative w-full">
+          <div className="relative w-full md:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-paper-400" />
             <input
               value={q}
@@ -37,20 +35,32 @@ const UserDashboard = () => {
             />
           </div>
 
-          {/* Logout */}
-          <div className="md:justify-self-end">
+          {/* Profile + Logout */}
+          <div className="flex items-center gap-3 justify-end flex-shrink-0">
+            <Link
+              to="/profile"
+              className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-800/60 px-3 py-2 text-sm font-medium text-paper-50 hover:bg-ink-700 transition"
+              aria-label="Open profile"
+            >
+              <User className="h-4 w-4" />
+              
+            </Link>
+
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-medium text-paper-50 hover:bg-brand-600 transition"
             >
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Body: user list */}
+
+       {/* TODO : put 4 filtering icons all,busy,online,offline which are our users of the project upon clicking those buttons the the OnlineList should be updated as per the selection */}
+
       <main className="mx-auto max-w-6xl px-4 py-4 pb-20">
         <section className="rounded-2xl border border-ink-700 bg-ink-800/60 backdrop-blur">
           <div className="px-4 py-3 border-b border-ink-700 flex items-center justify-between">

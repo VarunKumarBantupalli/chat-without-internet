@@ -13,6 +13,7 @@ import {
   EyeOff,
   Radio,
   Loader2,
+  Tag,
 } from "lucide-react";
 
 const Register = () => {
@@ -21,6 +22,7 @@ const Register = () => {
     name: "",
     mobile: "",
     address: "",
+    tag: "",
     email: "",
     password: "",
   });
@@ -85,6 +87,7 @@ const Register = () => {
         name: "",
         mobile: "",
         address: "",
+        tag: "",
         email: "",
         password: "",
       });
@@ -200,6 +203,20 @@ const Register = () => {
               name="address"
               placeholder="Address"
               value={formData.address}
+              onChange={handleChange}
+              required
+              className="w-full rounded-xl bg-ink-700/60 border border-ink-600 pl-10 pr-3 py-3 text-paper-50 placeholder:text-paper-400 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+
+          {/* tag */}
+          <div className="relative">
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-paper-400 h-4 w-4" />
+            <input
+              type="text"
+              name="tag"
+              placeholder="Profile tag / handle"
+              value={formData.tag}
               onChange={handleChange}
               required
               className="w-full rounded-xl bg-ink-700/60 border border-ink-600 pl-10 pr-3 py-3 text-paper-50 placeholder:text-paper-400 focus:outline-none focus:ring-2 focus:ring-brand"
