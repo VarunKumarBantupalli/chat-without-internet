@@ -1,7 +1,6 @@
 import { io } from 'socket.io-client';
 import { getToken } from './authToken';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from './apiBase';
 
 let socket = null;
 
@@ -13,7 +12,7 @@ export function connectSocket() {
   if (socket) return socket; // already created (connected or connecting)
 
   const token = getToken();
-  socket = io(API_URL, {
+  socket = io(API_BASE_URL, {
     auth: { token },
     transports: ['websocket'],
   });

@@ -1,8 +1,8 @@
 // src/components/Login.jsx
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Radio } from "lucide-react";
+import http from "../api/http";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -21,10 +21,7 @@ const Login = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const res = await axios.post(
-        "http://localhost:3000/api/users/login",
-        formData
-      );
+      const res = await http.post("/users/login", formData);
 
       const { token, role } = res.data;
       if (!token) throw new Error("No token received from server.");

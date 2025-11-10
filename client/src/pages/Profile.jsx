@@ -1,6 +1,5 @@
 // src/pages/Profile.jsx
 import React, { useEffect, useState, useMemo } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2,
@@ -11,8 +10,7 @@ import {
   Pencil,
   X,
 } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import http from "../api/http";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -64,9 +62,7 @@ const Profile = () => {
           return;
         }
 
-        const res = await axios.get(`${API_BASE_URL}/api/users/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await http.get("/users/profile");
 
         const user = res.data.user || res.data;
         const data = {
@@ -164,9 +160,8 @@ const Profile = () => {
         data.append("image", imageFile);
       }
 
-      const res = await axios.put(`${API_BASE_URL}/api/users/profile`, data, {
+      const res = await http.put("/users/profile", data, {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
@@ -225,9 +220,7 @@ const Profile = () => {
         return;
       }
 
-      await axios.delete(`${API_BASE_URL}/api/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await http.delete("/users/profile");
 
       localStorage.removeItem("token");
       localStorage.removeItem("role");

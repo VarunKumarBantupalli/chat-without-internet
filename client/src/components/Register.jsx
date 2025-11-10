@@ -15,6 +15,7 @@ import {
   Loader2,
   Tag,
 } from "lucide-react";
+import http from "../api/http";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -77,7 +78,7 @@ const Register = () => {
 
       const payload = { ...formData, image: imageUrl };
 
-      await axios.post("http://localhost:3000/api/users/register", payload);
+      await http.post("/users/register", payload);
 
       setMessage({ text: "User registered successfully!", type: "success" });
 
