@@ -20,7 +20,7 @@ const UserDashboard = () => {
         <div className="mx-auto max-w-6xl px-4 py-3 grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr_auto] md:items-center">
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-brand" />
-            <span className="font-semibold tracking-tight">LANTalk</span>
+            <span className="font-semibold tracking-tight">OfflineOrbit</span>
           </div>
 
           {/* global search */}

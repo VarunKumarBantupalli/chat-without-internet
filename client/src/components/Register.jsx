@@ -129,7 +129,7 @@ const Register = () => {
             <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
           </div>
           <p className="mt-2 text-sm text-paper-400">
-            Join LANTalk and start chatting on your LAN securely.
+            Join OfflineOrbit and start chatting on your LAN securely.
           </p>
         </div>
 

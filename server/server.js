@@ -73,7 +73,7 @@ async function start() {
 
     // 7) Start
     const port = process.env.PORT || 5000;
-    server.listen(port, () => {
+    server.listen(port, '0.0.0.0', () => {
       console.log(`Server is running at http://localhost:${port}`);
     });
   } catch (err) {

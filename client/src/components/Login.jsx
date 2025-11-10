@@ -67,7 +67,7 @@ const Login = () => {
         {/* Logo + title */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <Radio className="text-brand h-5 w-5" />
-          <h1 className="text-2xl font-semibold tracking-tight">LANTalk</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">OfflineOrbit</h1>
         </div>
 
         {/* Inputs */}
