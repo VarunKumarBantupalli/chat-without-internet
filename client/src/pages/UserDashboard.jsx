@@ -1,11 +1,21 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Radio, LogOut, Search, Megaphone, User } from "lucide-react";
+import {
+  Radio,
+  LogOut,
+  Search,
+  Megaphone,
+  User,
+  ListFilter,
+  CheckCircle2,
+  CircleOff,
+} from "lucide-react";
 import OnlineList from "../components/OnlineList";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const handleLogout = () => {
     localStorage.removeItem("role");
@@ -58,20 +68,60 @@ const UserDashboard = () => {
       </header>
 
       {/* Body: user list */}
-
-       {/* TODO : put 4 filtering icons all,busy,online,offline which are our users of the project upon clicking those buttons the the OnlineList should be updated as per the selection */}
-
       <main className="mx-auto max-w-6xl px-4 py-4 pb-20">
         <section className="rounded-2xl border border-ink-700 bg-ink-800/60 backdrop-blur">
-          <div className="px-4 py-3 border-b border-ink-700 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-ink-700 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h2 className="font-semibold text-paper-100">Chats</h2>
             <span className="text-xs text-paper-400">
               Select someone to start messaging
             </span>
           </div>
 
+          <div className="px-4 py-3 border-b border-ink-800/80 flex flex-wrap gap-2">
+            {[
+              {
+                value: "all",
+                label: "All",
+                icon: ListFilter,
+                color: "text-paper-200",
+              },
+              {
+                value: "online",
+                label: "Online",
+                icon: CheckCircle2,
+                color: "text-emerald-400",
+              },
+              {
+                value: "offline",
+                label: "Offline",
+                icon: CircleOff,
+                color: "text-paper-400",
+              },
+            ].map(({ value, label, icon: Icon, color }) => {
+              const active = statusFilter === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setStatusFilter(value)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? "border-brand bg-brand/10 text-paper-50"
+                      : "border-ink-600 bg-ink-800/60 text-paper-300 hover:bg-ink-700/60"
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${active ? "" : color}`} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Online user list (already supports filterQuery + navigateOnClick) */}
-          <OnlineList filterQuery={q} navigateOnClick />
+          <OnlineList
+            filterQuery={q}
+            statusFilter={statusFilter}
+            navigateOnClick
+          />
         </section>
       </main>
 

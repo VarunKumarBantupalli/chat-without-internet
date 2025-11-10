@@ -116,3 +116,15 @@ export const deleteAccount = async (req, res) => {
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
+
+// GET /api/users/all
+// Private
+export const listUsers = async (_req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.status(200).json({ users });
+  } catch (error) {
+    console.error("listUsers error:", error);
+    res.status(500).json({ message: "Failed to load users." });
+  }
+};

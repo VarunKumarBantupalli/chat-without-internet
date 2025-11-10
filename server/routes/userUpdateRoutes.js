@@ -4,6 +4,7 @@ import {
   getProfile,
   updateProfile,
   deleteAccount,
+  listUsers,
 } from "../controllers/userUpdateController.js";
 import upload from "../middleware/multer.js";
 import authApi from "../middleware/authApi.js";
@@ -12,6 +13,8 @@ const router = express.Router();
 
 
 router.use(authApi);
+
+router.get("/all", listUsers);
 
 router.get("/profile", getProfile);
 
