@@ -64,7 +64,10 @@ export default function Direct() {
       setThread(t);
       const history = await fetchMessages(t._id);
       setMsgs(history);
-      setTimeout(() => listRef.current?.scrollTo({ top: 1e9, behavior: "auto" }), 0);
+      setTimeout(
+        () => listRef.current?.scrollTo({ top: 1e9, behavior: "auto" }),
+        0
+      );
     })();
   }, [selected]);
 
@@ -75,7 +78,10 @@ export default function Direct() {
     const onRecv = (m) => {
       if (!thread || m.thread_id !== thread._id) return;
       setMsgs((prev) => [...prev, m]);
-      setTimeout(() => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }), 0);
+      setTimeout(
+        () => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }),
+        0
+      );
     };
     const onAck = ({ msg }) => {
       if (!thread || msg.thread_id !== thread._id) return;
@@ -94,7 +100,9 @@ export default function Direct() {
     const s = getSocket() || connectSocket();
     if (!thread || !selected) return;
 
-    const tempId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tempId = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
     const optimistic = {
       _id: tempId,
       thread_id: thread._id,
@@ -105,18 +113,28 @@ export default function Direct() {
       optimistic: true,
     };
     setMsgs((prev) => [...prev, optimistic]);
-    setTimeout(() => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }), 0);
+    setTimeout(
+      () => listRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }),
+      0
+    );
 
     s.emit("chat:send", { to: selected.userId, body: text, tempId }, (ack) => {
       if (!ack?.ok) {
-        setMsgs((prev) => prev.map((m) => (m._id === tempId ? { ...m, failed: true } : m)));
+        setMsgs((prev) =>
+          prev.map((m) => (m._id === tempId ? { ...m, failed: true } : m))
+        );
         return;
       }
-      setMsgs((prev) => prev.map((m) => (m._id === tempId ? ack.msg : m)));
+      setMsgs((prev) =>
+        prev.map((m) => (m._id === tempId ? ack.msg : m))
+      );
     });
   };
 
-  const title = useMemo(() => selected?.name || selected?.userId || "—", [selected]);
+  const title = useMemo(
+    () => selected?.name || selected?.userId || "—",
+    [selected]
+  );
 
   // START the call here using the shared engine, then navigate to call UI
   const goAudio = () => {
@@ -135,19 +153,22 @@ export default function Direct() {
   const onAcceptIncoming = () => {
     if (!remoteUser) return;
     accept();
-    navigate(`/call/${incomingHasVideo ? "video" : "audio"}/${remoteUser.userId}`);
+    navigate(
+      `/call/${incomingHasVideo ? "video" : "audio"}/${remoteUser.userId}`
+    );
   };
 
   return (
-    <div className="min-h-screen bg-ink-900 text-paper-50">
-      <div className="container mx-auto p-4 grid gap-4 md:grid-cols-3">
-        {/* Chat area */}
-        <section className="md:col-span-2 rounded-2xl border border-ink-700 bg-ink-800/60 flex flex-col">
+    <div className="min-h-screen bg-ink-900 text-paper-50 flex justify-center">
+      {/* Centered wrapper */}
+      <div className="w-full max-w-5xl p-4">
+        {/* Chat area card */}
+        <section className="rounded-2xl border border-ink-700 bg-ink-800/60 flex flex-col h-[calc(100vh-2.5rem)]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-ink-700">
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src={selected?.image}
+                src={selected?.image || AVATAR(selected?.name)}
                 alt={selected?.name || "User"}
                 className="h-9 w-9 rounded-full border border-ink-600 bg-ink-700 object-cover"
               />
@@ -163,7 +184,9 @@ export default function Direct() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-paper-400 truncate">{selected?.tag}</p>
+                <p className="text-xs text-paper-400 truncate">
+                  {selected?.tag}
+                </p>
               </div>
             </div>
 
@@ -187,16 +210,20 @@ export default function Direct() {
             </div>
           </div>
 
-          {/* Messages */}
+          {/* Messages (scrollable with input fixed at bottom of card) */}
           <div
             ref={listRef}
-            className="flex-1 overflow-y-auto p-3 space-y-2 bg-ink-900/35"
-            style={{ minHeight: 320 }}
+            className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2 bg-ink-900/35"
           >
             {msgs.map((m) => {
               const mine = m.from === meId;
               return (
-                <div key={m._id} className={`max-w-[72%] ${mine ? "ml-auto text-right" : ""}`}>
+                <div
+                  key={m._id}
+                  className={`max-w-[72%] ${
+                    mine ? "ml-auto text-right" : ""
+                  }`}
+                >
                   <div
                     className={`inline-block rounded-2xl px-3 py-2 ${
                       mine
@@ -207,8 +234,15 @@ export default function Direct() {
                     {m.body}
                   </div>
                   <div className="text-[10px] text-paper-400 mt-0.5">
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    {m.failed ? " • failed" : m.optimistic ? " • sending…" : ""}
+                    {new Date(m.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {m.failed
+                      ? " • failed"
+                      : m.optimistic
+                      ? " • sending…"
+                      : ""}
                   </div>
                 </div>
               );
@@ -227,7 +261,7 @@ export default function Direct() {
         <div className="fixed bottom-6 right-6 z-40 w-[320px] rounded-2xl border border-ink-700 bg-ink-800/90 backdrop-blur shadow-xl p-4">
           <div className="flex items-center gap-3">
             <img
-              src={remoteUser?.image}
+              src={remoteUser?.image || AVATAR(remoteUser?.name)}
               alt="caller"
               className="h-12 w-12 rounded-full border border-ink-600 bg-ink-700 object-cover"
             />
@@ -241,10 +275,16 @@ export default function Direct() {
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <button className="flex-1 rounded-xl bg-brand text-paper-50 py-2" onClick={onAcceptIncoming}>
+            <button
+              className="flex-1 rounded-xl bg-brand text-paper-50 py-2"
+              onClick={onAcceptIncoming}
+            >
               Accept
             </button>
-            <button className="flex-1 rounded-xl bg-ink-700 text-paper-50 border border-ink-600 py-2" onClick={decline}>
+            <button
+              className="flex-1 rounded-xl bg-ink-700 text-paper-50 border border-ink-600 py-2"
+              onClick={decline}
+            >
               Decline
             </button>
           </div>
